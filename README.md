@@ -31,7 +31,7 @@ The following **additional** features are implemented:
 
 Here's a walkthrough of implemented user stories:
 
-<img src='https://github.com/huongvu/Bootcamp-Android/blob/huongvu-patch-1/Walkthrough-SimpleTodo.gif' title='Video Walkthrough' width='' alt='Video Walkthrough' />
+<img src='https://github.com/huongvu/SimpleTodo/blob/master/Walkthrough-SimpleTodo.gif' title='Video Walkthrough' width='' alt='Video Walkthrough' />
 
 GIF created with [LiceCap](http://www.cockos.com/licecap/).
 
