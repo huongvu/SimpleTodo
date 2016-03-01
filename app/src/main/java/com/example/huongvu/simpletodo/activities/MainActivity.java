@@ -1,22 +1,22 @@
 package com.example.huongvu.simpletodo.activities;
 
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.support.v7.widget.Toolbar;
 
 import com.example.huongvu.simpletodo.R;
+import com.example.huongvu.simpletodo.adapters.ItemCursorAdapter;
 import com.example.huongvu.simpletodo.models.ItemsTodo;
 import com.example.huongvu.simpletodo.utils.ItemTodoDBHelper;
+
 
 import org.apache.commons.io.FileUtils;
 
@@ -29,39 +29,39 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     ArrayList<String> items;
     ArrayList<Integer> itemsid;
-    ArrayAdapter<String> itemsAdapter;
+    //ArrayAdapter<String> itemsAdapter;
 
     ListView lvItems;
     String editText = "";
+    String editPrio = "";
+
     int currItem_pos;
+    Cursor todoCursor = null;
 
     private final int REQUEST_CODE = 20;
     private final int REQUEST_NEW_ID = 300;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
+
+        //Get Adapter Custom Cursor
+
 
         lvItems = (ListView)findViewById(R.id.lvItems);
 
-        readDbItem();
+        //readDbItem();
 
-        itemsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, items);
-        lvItems.setAdapter(itemsAdapter);
+        //itemsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, items);
+        //lvItems.setAdapter(itemsAdapter);
+        getAdapter();
 
         setupListViewListener();
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
     }
 
     private void setupListViewListener(){
@@ -73,8 +73,10 @@ public class MainActivity extends AppCompatActivity {
                     public void onItemClick(AdapterView<?> adapter, View item, int pos, long id) {
                         // first parameter is the context, second is the class of the activity to launch
                         Intent i = new Intent(MainActivity.this, EditItemActivity.class);
-                        i.putExtra("item", itemsAdapter.getItem(pos));
-                        currItem_pos = pos;
+                        i.putExtra("item", todoCursor.getString(todoCursor.getColumnIndexOrThrow("name")));
+                        i.putExtra("prio",todoCursor.getString(todoCursor.getColumnIndexOrThrow("priority")));
+                        //currItem_pos = pos;
+                        currItem_pos = todoCursor.getInt(todoCursor.getColumnIndexOrThrow("id"));
                         startActivityForResult(i, REQUEST_CODE);
 
                     }
@@ -86,10 +88,10 @@ public class MainActivity extends AppCompatActivity {
                 new AdapterView.OnItemLongClickListener() {
                     @Override
                     public boolean onItemLongClick(AdapterView<?> adapter, View item, int pos, long id) {
-                        deleteDbItem(items.get(pos));
-                        items.remove(pos);
-                        itemsid.remove(pos);
-                        itemsAdapter.notifyDataSetChanged();
+
+                        deleteDbItem(todoCursor.getString(todoCursor.getColumnIndexOrThrow("name")));
+                        //itemsAdapter.notifyDataSetChanged();
+                        getAdapter();
                         return true;
                     }
                 }
@@ -101,9 +103,10 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == RESULT_OK && requestCode == REQUEST_CODE) {
             // Extract name value from result extras
             editText = data.getExtras().getString("itemUpdate");
-            items.set(currItem_pos, editText);
-            itemsAdapter.notifyDataSetChanged();
-            writeDbItem(itemsid.get(currItem_pos),editText);
+            editPrio = data.getExtras().getString("PriorityUpdate");
+            //items.set(currItem_pos, editText);
+            writeDbItem(currItem_pos, editText, editPrio);
+            getAdapter();
         }
     }
     @Override
@@ -129,13 +132,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onAddItem(View view) {
-        long updateItemId;
         EditText etNewItem = (EditText)findViewById(R.id.etNewItem);
-        String itemText = etNewItem.getText().toString();
-        itemsAdapter.add(itemText);
-        updateItemId = writeDbItem(REQUEST_NEW_ID, itemText);
-        itemsid.add((int)updateItemId);
-        etNewItem.setText("");
+        String itemText = etNewItem.getText().toString().trim();
+        //itemsAdapter.add(itemText);
+        if(itemText.equals("")) {
+            //donothing
+        }
+        else{
+            writeDbItem(REQUEST_NEW_ID, itemText, "LOW");
+            getAdapter();
+            etNewItem.setText("");
+        }
+
 
     }
 
@@ -159,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private long writeDbItem(int itemId, String itemName) {
+    private long writeDbItem(int itemId, String itemName, String Priority) {
         long returnItemId;
         // Get singleton instance of database
         ItemTodoDBHelper databaseHelper = ItemTodoDBHelper.getInstance(this);
@@ -168,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
 
         updateItem.itemId = itemId;
         updateItem.itemName = itemName;
+        updateItem.itemPriority = Priority;
         // Add or update item to the database
 
         returnItemId = databaseHelper.addOrUpdateItem(updateItem);
@@ -180,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
         // Get singleton instance of database
         ItemTodoDBHelper databaseHelper = ItemTodoDBHelper.getInstance(this);
 
-        // Get all items from database
+        // Delete item from database
         databaseHelper.deleteItems(itemName);
     }
 
@@ -203,6 +212,23 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+    private void getAdapter() {
+        // Get singleton instance of database
+        ItemTodoDBHelper databaseHelper = ItemTodoDBHelper.getInstance(this);
+        // Delete item from database
+        todoCursor = databaseHelper.getCustomCursor();
+
+        // Setup cursor adapter using cursor from last step
+        ItemCursorAdapter todoAdapter = new ItemCursorAdapter(this, todoCursor, 0);
+
+        // Attach cursor adapter to the ListView
+        lvItems.setAdapter(todoAdapter);
+
+    }
+
+    //Get update cursor
+
 
 
 }

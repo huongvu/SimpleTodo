@@ -20,7 +20,7 @@ public class ItemTodoDBHelper extends SQLiteOpenHelper {
     private static ItemTodoDBHelper sInstance;
 
     // Database Info
-    private static final String DATABASE_NAME = "itemsDatabase";
+    private static final String DATABASE_NAME = "itemDatabase";
     private static final int DATABASE_VERSION = 1;
 
     // Table Names
@@ -28,7 +28,6 @@ public class ItemTodoDBHelper extends SQLiteOpenHelper {
 
     // Post Table Columns
     private static final String KEY_ITEM_ID = "id";
-    private static final String KEY_ITEM_ID_FK = "itemId";
     private static final String KEY_ITEM_NAME = "name";
     private static final String KEY_ITEM_PRI = "priority";
 
@@ -60,10 +59,11 @@ public class ItemTodoDBHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         String CREATE_ITEMS_TABLE = "CREATE TABLE " + TABLE_ITEMS +
                 "(" +
-                KEY_ITEM_ID + " INTEGER PRIMARY KEY," + // Define a primary key
-                KEY_ITEM_NAME + " TEXT" +
+                KEY_ITEM_ID + " INTEGER PRIMARY KEY," +
+                KEY_ITEM_NAME + " TEXT," +
                 KEY_ITEM_PRI + " TEXT" +
                 ")";
+
 
         db.execSQL(CREATE_ITEMS_TABLE);
 
@@ -123,6 +123,7 @@ public class ItemTodoDBHelper extends SQLiteOpenHelper {
             ContentValues values = new ContentValues();
             values.put(KEY_ITEM_NAME, item.itemName);
             values.put(KEY_ITEM_ID, item.itemId);
+            values.put(KEY_ITEM_PRI, item.itemPriority);
 
             // First try to update the item in case the item already exists in the database
             // This assumes itemIds are unique
@@ -148,6 +149,7 @@ public class ItemTodoDBHelper extends SQLiteOpenHelper {
                 // item with this itemName did not already exist, so insert new item
                 ContentValues valuesItem = new ContentValues();
                 valuesItem.put(KEY_ITEM_NAME, item.itemName);
+                valuesItem.put(KEY_ITEM_PRI, item.itemPriority);
                 itemId = db.insertOrThrow(TABLE_ITEMS, null, valuesItem);
                 db.setTransactionSuccessful();
 
@@ -219,5 +221,18 @@ public class ItemTodoDBHelper extends SQLiteOpenHelper {
         } finally {
             db.endTransaction();
         }
+    }
+
+    public Cursor getCustomCursor() {
+
+        // SELECT * FROM ITEMS
+        String ITEMS_SELECT_QUERY = "SELECT items.*,items.id as _id FROM items "; ;
+
+        // "getReadableDatabase()" and "getWriteableDatabase()" return the same object (except under low
+        // disk space scenarios)
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(ITEMS_SELECT_QUERY, null);
+
+        return cursor;
     }
 }
